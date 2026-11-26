@@ -2,6 +2,7 @@ var express = require('express');
 var store = require('../lib/store');
 var inventory = require('../lib/inventory');
 var pricing = require('../lib/pricing');
+var tax = require('../lib/tax');
 var coupons = require('../lib/coupons');
 var orders = require('../lib/orders');
 var ledger = require('../lib/ledger');
@@ -43,15 +44,17 @@ router.post('/orders', function (req, res) {
     var q = parseInt(body.items[i].qty, 10);
     if (!q || q < 1) q = 1;
 
-    // Note: hsn is stored on line items; tax slab is resolved via lib/tax.js
-    items.push({
+    var item = {
       id: p.id,
       sku: p.sku,
       name: p.name,
       hsn: p.hsn,
       price: p.price,
       qty: q
-    });
+    };
+    // Keep the billed GST rate for reprints after slab changes.
+    item.gstRate = tax.getRateForItem(item);
+    items.push(item);
   }
 
   var stock = inventory.check(db.products, items);
